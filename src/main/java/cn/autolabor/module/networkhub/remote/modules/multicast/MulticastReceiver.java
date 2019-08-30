@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
  * 协议： | 名字 string 0x00 | cmd byte | payload byte[] |
  */
 public final class MulticastReceiver
-        extends AbstractDependent<MulticastReceiver> {
+    extends AbstractDependent<MulticastReceiver> {
 
     private final int bufferSize;
 
@@ -75,15 +75,15 @@ public final class MulticastReceiver
 
         try {
             sockets
-                    .safeGet()
-                    .get(null)
-                    .receive(bufferPacket);
+                .safeGet()
+                .get(null)
+                .receive(bufferPacket);
         } catch (IOException e) {
             e.printStackTrace();
         }
 
         SimpleInputStream stream = new SimpleInputStream(
-                bufferPacket.getData(), 0, bufferPacket.getLength());
+            bufferPacket.getData(), 0, bufferPacket.getLength());
 
         String sender = stream.readEnd().trim(); // 收名字
         if (name.tryLetOrDefault("", it -> it.value).equals(sender))
@@ -93,13 +93,13 @@ public final class MulticastReceiver
             Inet4Address address = (Inet4Address) bufferPacket.getAddress();
 
             List<Map.Entry<NetworkInterface, InterfaceAddress>> temp
-                    = networks.tryLetOrDefault(null,
-                    it -> it
-                            .view
-                            .entrySet()
-                            .stream()
-                            .filter(entry -> match(entry.getValue(), address))
-                            .collect(Collectors.toList())
+                = networks.tryLetOrDefault(null,
+                it -> it
+                    .view
+                    .entrySet()
+                    .stream()
+                    .filter(entry -> match(entry.getValue(), address))
+                    .collect(Collectors.toList())
             );
 
             if (temp != null && temp.size() == 1)
@@ -108,15 +108,17 @@ public final class MulticastReceiver
             addresses.tryApply(it -> it.set(sender, address));
         }
 
-        UdpCmd cmd = UdpCmd.memory.get((byte) stream.read());
+        byte cmd_byte = (byte) stream.read();
+        UdpCmd cmd = UdpCmd.memory.get(cmd_byte);
+        if (cmd == null) return;
         byte[] payload = stream.lookRest();
 
         //        System.out.println
         //            ("sender: " + sender + ", cmd: " + cmd + ", payload: byte[" + payload.length + "]");
 
         listeners
-                .stream()
-                .filter(it -> it.getInterest().isEmpty() || it.getInterest().contains(cmd.id))
-                .forEach(it -> it.process(sender, cmd, payload));
+            .stream()
+            .filter(it -> it.getInterest().isEmpty() || it.getInterest().contains(cmd.id))
+            .forEach(it -> it.process(sender, cmd, payload));
     }
 }
