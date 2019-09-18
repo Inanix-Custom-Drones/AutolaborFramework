@@ -317,7 +317,6 @@ public class JsonParser {
                         index++;
                     } else {
                         commentFlag = CommentFlag.UNCOMMENT;
-                        index++;
                     }
                     break;
             }

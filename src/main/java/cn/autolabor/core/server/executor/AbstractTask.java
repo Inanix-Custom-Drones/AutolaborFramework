@@ -135,14 +135,12 @@ public abstract class AbstractTask extends ScheduledPriorityItem {
                     }
                     // 任务执行
                     Object result = currentFunction.invoke(params);
-
                     // 任务代理 - 任务执行后
                     for (TaskProxy proxy : desTaskProxies) {
                         if (proxy.filter(this, currentEventName)) {
                             proxy.after(this, currentEventName, result, params);
                         }
                     }
-
                     // 追踪记录终止
                     if (needTrackBehavior) {
                         TaskThreadLocal.unmarkTask(this);

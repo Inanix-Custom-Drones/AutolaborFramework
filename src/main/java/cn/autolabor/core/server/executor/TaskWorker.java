@@ -23,9 +23,11 @@ public class TaskWorker extends QueuedSynchronizer implements Runnable {
         this.thread = threadFactory.newThread(this);
         if (this.firstTask == null) {
             isStandard = true;
+            this.thread.setDaemon(false);
             this.thread.setName(String.format("standard-thread-%s", Strings.getShortUUID()));
         } else {
             isStandard = false;
+            this.thread.setDaemon(true);
             this.thread.setName(String.format("preemptive-thread-%s", Strings.getShortUUID()));
         }
         this.taskExecutorServer = taskExecutorServer;
@@ -46,6 +48,7 @@ public class TaskWorker extends QueuedSynchronizer implements Runnable {
             try {
                 t.interrupt();
             } catch (SecurityException ignore) {
+
             }
         }
     }
