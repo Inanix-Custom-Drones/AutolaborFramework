@@ -6,8 +6,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class ScheduledPriorityQueue extends AbstractQueue<ScheduledPriorityItem> implements
-        BlockingQueue<ScheduledPriorityItem> {
+public class ScheduledPriorityQueue extends AbstractQueue<ScheduledPriorityItem> implements BlockingQueue<ScheduledPriorityItem> {
 
     private static final int INITIAL_CAPACITY = 16;
     private final ReentrantLock lock = new ReentrantLock();
@@ -33,8 +32,7 @@ public class ScheduledPriorityQueue extends AbstractQueue<ScheduledPriorityItem>
 
     private void siftUp(ScheduledPriorityItem key, int k) {
         if (!key.indexData.getItemType().equals(QueueIndexData.ItemType.NONE)) {
-            ScheduledPriorityItem[] queue = key.indexData.getItemType().equals(QueueIndexData.ItemType.TIMEOUT) ?
-                    timeoutQueue : nonTimeoutQueue;
+            ScheduledPriorityItem[] queue = key.indexData.getItemType().equals(QueueIndexData.ItemType.TIMEOUT) ? timeoutQueue : nonTimeoutQueue;
             while (k > 0) {
                 int parent = (k - 1) >>> 1;
                 ScheduledPriorityItem e = queue[parent];
@@ -82,8 +80,7 @@ public class ScheduledPriorityQueue extends AbstractQueue<ScheduledPriorityItem>
         } else {
             oldCapacity = this.nonTimeoutQueue.length;
             newCapacity = oldCapacity + (oldCapacity >> 1);
-            this.nonTimeoutQueue = Arrays.copyOf(this.nonTimeoutQueue, newCapacity < 0 ? Integer.MAX_VALUE :
-                    newCapacity);
+            this.nonTimeoutQueue = Arrays.copyOf(this.nonTimeoutQueue, newCapacity < 0 ? Integer.MAX_VALUE : newCapacity);
         }
     }
 
@@ -91,14 +88,12 @@ public class ScheduledPriorityQueue extends AbstractQueue<ScheduledPriorityItem>
         if (x != null) {
             switch (x.indexData.getItemType()) {
                 case TIMEOUT:
-                    if (x.indexData.getIndex() >= 0 && x.indexData.getIndex() < timeoutSize && timeoutQueue[x
-                            .indexData.getIndex()] == x) {
+                    if (x.indexData.getIndex() >= 0 && x.indexData.getIndex() < timeoutSize && timeoutQueue[x.indexData.getIndex()] == x) {
                         return x.indexData;
                     }
                     break;
                 case NON_TIMEOUT:
-                    if (x.indexData.getIndex() >= 0 && x.indexData.getIndex() < nonTimeoutSize && nonTimeoutQueue[x
-                            .indexData.getIndex()] == x) {
+                    if (x.indexData.getIndex() >= 0 && x.indexData.getIndex() < nonTimeoutSize && nonTimeoutQueue[x.indexData.getIndex()] == x) {
                         return x.indexData;
                     }
                     break;
@@ -285,6 +280,8 @@ public class ScheduledPriorityQueue extends AbstractQueue<ScheduledPriorityItem>
                     }
                 }
             }
+        } catch (Exception e) {
+            return null;
         } finally {
             if (leader == null && (nonTimeoutSize > 0 || timeoutSize > 0)) {
                 available.signal();
