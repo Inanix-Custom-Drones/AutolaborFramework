@@ -3,10 +3,13 @@ package cn.autolabor.module.networkhub;
 import cn.autolabor.module.networkhub.dependency.Component;
 import cn.autolabor.module.networkhub.dependency.DynamicScope;
 
+import java.io.Closeable;
+import java.io.IOException;
+
 /**
  * 单例的远程终端内核
  */
-public enum RemoteHub {
+public enum RemoteHub implements Closeable {
     ME;
 
     private final DynamicScope scope = new DynamicScope();
@@ -30,5 +33,18 @@ public enum RemoteHub {
                 }
         }
         throw new RuntimeException("type system run into a exception");
+    }
+
+    @Override
+    public void close() throws IOException {
+        scope.components.stream()
+            .filter(it -> it instanceof Closeable)
+            .forEach(it -> {
+                try {
+                    ((Closeable) it).close();
+                } catch (IOException e) {
+                    // ignore
+                }
+            });
     }
 }

@@ -3,13 +3,14 @@ package cn.autolabor.module.networkhub.remote.resources;
 import cn.autolabor.module.networkhub.dependency.AbstractComponent;
 import cn.autolabor.module.networkhub.dependency.LazyProperty;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public final class ServerSockets extends AbstractComponent<ServerSockets> {
+public final class ServerSockets extends AbstractComponent<ServerSockets> implements Closeable {
     public final LazyProperty<ServerSocket> defaultSocket;
     private final ConcurrentHashMap<Integer, ServerSocket> core = new ConcurrentHashMap<>();
     public final Map<Integer, ServerSocket> view = Collections.unmodifiableMap(core);
@@ -35,7 +36,19 @@ public final class ServerSockets extends AbstractComponent<ServerSockets> {
 
     public ServerSocket get(Integer port) {
         return port == 0
-                ? defaultSocket.get()
-                : core.computeIfAbsent(port, it -> buildWithoutException(port));
+            ? defaultSocket.get()
+            : core.computeIfAbsent(port, it -> buildWithoutException(port));
+    }
+
+    @Override
+    public void close() throws IOException {
+        defaultSocket.get().close();
+        core.forEachValue(1, it -> {
+            try {
+                it.close();
+            } catch (IOException e) {
+                // ignore
+            }
+        });
     }
 }

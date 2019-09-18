@@ -19,6 +19,7 @@ import cn.autolabor.module.networkhub.remote.resources.UdpCmd;
 import cn.autolabor.util.autobuf.AutoBufAdapter;
 import cn.autolabor.util.autobuf.ByteBuilder;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -92,6 +93,15 @@ public class UDPMulticastReceiver extends AbstractTask {
                 ServerManager.me().run(this, "receive");
             }
         }
+
+        @Override
+        public void onClose() {
+            try {
+                sockets.close();
+            } catch (IOException e) {
+                // ignore
+            }
+        }
     }
 
     public class ReceiverMulticastListener extends AbstractDependent implements MulticastListener {
@@ -133,6 +143,4 @@ public class UDPMulticastReceiver extends AbstractTask {
             }
         }
     }
-
-
 }

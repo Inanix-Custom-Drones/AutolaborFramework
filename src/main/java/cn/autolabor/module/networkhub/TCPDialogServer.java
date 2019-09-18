@@ -18,6 +18,7 @@ import cn.autolabor.util.autobuf.AutoBufEmbedded;
 import cn.autolabor.util.autobuf.ByteBuilder;
 import cn.autolabor.util.reflect.TypeNode;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
@@ -33,10 +34,12 @@ public class TCPDialogServer extends AbstractTask {
     private boolean udpMulticastBroadcasterExist = false;
     private boolean udpMulticastReceiverExist = false;
     private List<TCPReceiveHandleTask> receiveHandleTasks = new ArrayList<>();
+    private final ServerSockets sockets = new ServerSockets();
+
 
     public TCPDialogServer(String... name) {
         super(name);
-        RemoteHub.ME.setAndGet(new ServerSockets());
+        RemoteHub.ME.setAndGet(sockets);
         server = RemoteHub.ME.setAndGet(new ShortConnectionServer());
         RemoteHub.ME.setAndGet(new DialogTcpServer(this::handleMsg));
 
@@ -130,6 +133,15 @@ public class TCPDialogServer extends AbstractTask {
                 server.invoke(serverPort);
             } finally {
                 ServerManager.me().run(this, "receive");
+            }
+        }
+
+        @Override
+        public void onClose() {
+            try {
+                sockets.close();
+            } catch (IOException e) {
+                // ignore
             }
         }
     }

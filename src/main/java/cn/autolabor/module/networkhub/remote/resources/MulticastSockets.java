@@ -3,7 +3,9 @@ package cn.autolabor.module.networkhub.remote.resources;
 import cn.autolabor.module.networkhub.dependency.AbstractComponent;
 import cn.autolabor.module.networkhub.dependency.LazyProperty;
 
+import java.io.Closeable;
 import java.io.IOException;
+import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
 import java.net.NetworkInterface;
@@ -11,15 +13,15 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public final class MulticastSockets extends AbstractComponent<MulticastSockets> {
+public final class MulticastSockets extends AbstractComponent<MulticastSockets> implements Closeable {
     public final InetSocketAddress address;
     private final LazyProperty<MulticastSocket> defaultSocket;
 
     private final ConcurrentHashMap<NetworkInterface, MulticastSocket> core =
-            new ConcurrentHashMap<>();
+        new ConcurrentHashMap<>();
 
     public final Map<NetworkInterface, MulticastSocket> view =
-            Collections.unmodifiableMap(core);
+        Collections.unmodifiableMap(core);
 
     public MulticastSockets(InetSocketAddress address) {
         super(MulticastSockets.class);
@@ -28,8 +30,8 @@ public final class MulticastSockets extends AbstractComponent<MulticastSockets> 
     }
 
     private static MulticastSocket multicastOn(
-            InetSocketAddress group,
-            NetworkInterface network
+        InetSocketAddress group,
+        NetworkInterface network
     ) {
         MulticastSocket result = null;
         try {
@@ -43,13 +45,19 @@ public final class MulticastSockets extends AbstractComponent<MulticastSockets> 
         return result;
     }
 
+    @Override
+    public void close() throws IOException {
+        defaultSocket.get().close();
+        core.forEachValue(1, DatagramSocket::close);
+    }
+
     public MulticastSocket get(NetworkInterface networkInterface) {
         return networkInterface == null
-                ? defaultSocket.get()
-                : core.computeIfAbsent
-                (
-                        networkInterface,
-                        net -> multicastOn(address, net)
-                );
+            ? defaultSocket.get()
+            : core.computeIfAbsent
+            (
+                networkInterface,
+                net -> multicastOn(address, net)
+            );
     }
 }
