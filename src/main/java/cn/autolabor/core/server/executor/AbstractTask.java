@@ -301,7 +301,11 @@ public abstract class AbstractTask extends ScheduledPriorityItem {
                     Type[] types = pType.getActualTypeArguments();
                     if (types.length == 1) {
                         try {
-                            f.set(this, ServerManager.me().getOrCreateMessageHandle(p.topic(), new TypeNode(types[0])));
+                            String topicStr = p.topic();
+                            if (topicStr.startsWith("${") && topicStr.endsWith("}")) {
+                                topicStr = (String) ServerManager.me().getConfig(this, topicStr.substring(2, topicStr.length() - 1));
+                            }
+                            f.set(this, ServerManager.me().getOrCreateMessageHandle(topicStr, new TypeNode(types[0])));
                         } catch (IllegalAccessException e) {
                             e.printStackTrace();
                         }

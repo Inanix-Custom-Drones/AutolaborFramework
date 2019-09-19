@@ -1,11 +1,11 @@
 package cn.autolabor.core.server.message;
 
 import cn.autolabor.core.server.ServerManager;
-import cn.autolabor.core.server.executor.AbstractTask;
-import cn.autolabor.core.server.executor.CallbackItem;
-import cn.autolabor.core.server.executor.TaskMethod;
-import cn.autolabor.core.server.executor.TaskThreadLocal;
+import cn.autolabor.core.server.executor.*;
+import cn.autolabor.util.Strings;
 import cn.autolabor.util.Sugar;
+import cn.autolabor.util.lambda.LambdaFunWithName;
+import cn.autolabor.util.lambda.function.TaskLambdaFunctionCode;
 import cn.autolabor.util.reflect.TypeNode;
 
 import java.util.*;
@@ -93,6 +93,10 @@ public class MessageHandle<T> {
         return this.lastMessageReceiveTime;
     }
 
+    public boolean addCallback(AbstractTask task, String event) {
+        return this.addCallback(task, event, new MessageSourceType[]{});
+    }
+
     public boolean addCallback(AbstractTask task, String event, MessageSourceType[] sourceFilter) {
         final ReentrantLock lock = this.lock;
         lock.lock();
@@ -100,15 +104,36 @@ public class MessageHandle<T> {
             TaskMethod method = task.getEvent(event);
             TypeNode[] params = method.getParamsType();
             if (params != null && params.length == 1 && Sugar.checkInherit(dataType.getRawType(), params[0].getRawType())) {
-                return putCallbackFunction(task, event, false, sourceFilter);
+                return putCallbackFunction(task, new LambdaFunWithName(method.getMethodName(), method.getFun()), false, sourceFilter);
             } else if (params != null && params.length == 2 && Sugar.checkInherit(dataType.getRawType(), params[0].getRawType()) && params[1].getRawType() == MessageSource.class) {
-                return putCallbackFunction(task, event, true, sourceFilter);
+                return putCallbackFunction(task, new LambdaFunWithName(method.getMethodName(), method.getFun()), true, sourceFilter);
             }
             return false;
         } finally {
             lock.unlock();
         }
     }
+
+    public boolean addCallback(LambdaFunWithName fun) {
+        return this.addCallback(fun, new MessageSourceType[]{});
+    }
+
+    public boolean addCallback(LambdaFunWithName fun, MessageSourceType[] sourceFilter) {
+        final ReentrantLock lock = this.lock;
+        lock.lock();
+        try {
+            if (fun.getFun().code().equals(TaskLambdaFunctionCode.FUN01)) {
+                return putCallbackFunction(new SimpleTask(Strings.getShortUUID(), Strings.getShortUUID(), 5, false), fun, false, sourceFilter);
+            } else if (fun.getFun().code().equals(TaskLambdaFunctionCode.FUN02)) {
+                return putCallbackFunction(new SimpleTask(Strings.getShortUUID(), Strings.getShortUUID(), 5, false), fun, true, sourceFilter);
+            } else {
+                return false;
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
 
     public Set<CallbackItem> getCallbackFunctionItems() {
         return callbackFunction.keySet();
@@ -119,10 +144,33 @@ public class MessageHandle<T> {
         lock.lock();
         try {
             Set<CallbackItem> keys = getCallbackFunctionItems();
+            Set<CallbackItem> remove = new HashSet<>();
             for (CallbackItem item : keys) {
                 if (item.getTask().equals(task)) {
-                    callbackFunction.remove(item);
+                    remove.add(item);
                 }
+            }
+            if (!remove.isEmpty()) {
+                remove.forEach(n -> callbackFunction.remove(n));
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public void removeCallbackByFunction(LambdaFunWithName fun) {
+        final ReentrantLock lock = this.lock;
+        lock.lock();
+        try {
+            Set<CallbackItem> keys = getCallbackFunctionItems();
+            Set<CallbackItem> remove = new HashSet<>();
+            for (CallbackItem item : keys) {
+                if (item.getEvent().equals(fun)) {
+                    remove.add(item);
+                }
+            }
+            if (!remove.isEmpty()) {
+                remove.forEach(n -> callbackFunction.remove(n));
             }
         } finally {
             lock.unlock();
@@ -137,7 +185,7 @@ public class MessageHandle<T> {
         return topic;
     }
 
-    private boolean putCallbackFunction(AbstractTask task, String event, boolean needSource, MessageSourceType[] sourceFilter) {
+    private boolean putCallbackFunction(AbstractTask task, LambdaFunWithName event, boolean needSource, MessageSourceType[] sourceFilter) {
         CallbackItem callbackItem = new CallbackItem(task, event);
         if (!callbackFunction.containsKey(callbackItem)) {
             callbackFunction.put(callbackItem, new EventInfo(needSource, sourceFilter));

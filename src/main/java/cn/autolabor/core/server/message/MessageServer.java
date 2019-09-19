@@ -3,7 +3,9 @@ package cn.autolabor.core.server.message;
 import cn.autolabor.core.server.ServerManager;
 import cn.autolabor.core.server.executor.AbstractTask;
 import cn.autolabor.core.server.executor.CallbackItem;
+import cn.autolabor.core.server.executor.TaskMethod;
 import cn.autolabor.util.Sugar;
+import cn.autolabor.util.lambda.LambdaFunWithName;
 import cn.autolabor.util.reflect.TypeNode;
 
 import java.util.HashSet;
@@ -63,11 +65,14 @@ public class MessageServer {
         final ReentrantLock lock = this.lock;
         lock.lock();
         try {
-            CallbackItem event = new CallbackItem(task, eventName);
-            if (!createHandleCallback.contains(event)) {
-                createHandleCallback.add(event);
-                for (Map.Entry<String, MessageHandle> entry : messagePool.entrySet()) {
-                    ServerManager.me().run(task, eventName, entry.getValue()); //  messageHandle
+            TaskMethod method = task.getEvent(eventName);
+            if (null != method) {
+                CallbackItem event = new CallbackItem(task, new LambdaFunWithName(method.getMethodName(), method.getFun()));
+                if (!createHandleCallback.contains(event)) {
+                    createHandleCallback.add(event);
+                    for (Map.Entry<String, MessageHandle> entry : messagePool.entrySet()) {
+                        ServerManager.me().run(task, eventName, entry.getValue()); //  messageHandle
+                    }
                 }
             }
         } finally {
@@ -79,8 +84,31 @@ public class MessageServer {
         final ReentrantLock lock = this.lock;
         lock.lock();
         try {
-            CallbackItem event = new CallbackItem(task, eventName);
-            createHandleCallback.remove(event);
+            TaskMethod method = task.getEvent(eventName);
+            if (null != method) {
+                CallbackItem event = new CallbackItem(task, new LambdaFunWithName(method.getMethodName(), method.getFun()));
+                createHandleCallback.remove(event);
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public void remove(AbstractTask task) {
+        final ReentrantLock lock = this.lock;
+        lock.lock();
+        try {
+            Set<CallbackItem> remove = new HashSet<>();
+            createHandleCallback.forEach(i -> {
+                if (i.getTask().equals(task)) {
+                    remove.add(i);
+                }
+            });
+            createHandleCallback.removeAll(remove);
+
+            messagePool.values().forEach(i -> {
+                i.removeCallbackByTask(task);
+            });
         } finally {
             lock.unlock();
         }

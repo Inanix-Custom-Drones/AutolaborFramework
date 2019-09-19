@@ -8,10 +8,10 @@ import cn.autolabor.module.networkhub.remote.utilities.SimpleOutputStream;
 
 import java.io.IOException;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.HashMap;
 
-public final class ShortConnectionServer
-        extends AbstractDependent<ShortConnectionServer> {
+public final class ShortConnectionServer extends AbstractDependent<ShortConnectionServer> {
 
     private final Hook<ServerSockets> servers = buildHook(ServerSockets.class);
     private final HashMap<Byte, ShortConnectionListener> listeners = new HashMap<>();
@@ -47,6 +47,8 @@ public final class ShortConnectionServer
             if (listener != null)
                 listener.process(name, socket);
             socket.close();
+        } catch (SocketException e) {
+            System.out.println("Close short connection socket!");
         } catch (IOException e) {
             e.printStackTrace();
         }

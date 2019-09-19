@@ -1,8 +1,11 @@
 package cn.autolabor.util.reflect;
 
+import cn.autolabor.module.networkhub.UDPMulticastBroadcaster;
 import cn.autolabor.util.Sugar;
 
 import java.lang.reflect.*;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -127,14 +130,23 @@ public class Reflects {
             }
         }
         return true;
+    }
 
+    public static List<Method> getAllMethods(Class<?> cls) {
+        List<Method> methods = new ArrayList<>();
+        if (null != cls) {
+            Class<?> currentClass = cls;
+            while (null != currentClass) {
+                Method[] declaredMethods = currentClass.getDeclaredMethods();
+                methods.addAll(Arrays.asList(declaredMethods));
+                currentClass = currentClass.getSuperclass();
+            }
+        }
+        return methods;
     }
 
     public static void main(String[] args) {
-        TypeNode node = new TypeFetch<List<String>[][]>() {
-        }.getTypeNode();
-
-        System.out.println(getRawType(node.getType()));
+        getAllMethods(UDPMulticastBroadcaster.class).forEach(System.out::println);
     }
 
 }

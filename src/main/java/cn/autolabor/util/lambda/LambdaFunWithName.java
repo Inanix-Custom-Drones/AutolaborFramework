@@ -2,6 +2,8 @@ package cn.autolabor.util.lambda;
 
 import cn.autolabor.util.lambda.function.TaskLambdaFun;
 
+import java.util.Objects;
+
 public class LambdaFunWithName {
     private String name;
     private TaskLambdaFun fun;
@@ -25,5 +27,26 @@ public class LambdaFunWithName {
 
     public void setFun(TaskLambdaFun fun) {
         this.fun = fun;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
+
+        LambdaFunWithName that = (LambdaFunWithName) o;
+
+        if (!Objects.equals(name, that.name))
+            return false;
+        return Objects.equals(fun, that.fun);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = name != null ? name.hashCode() : 0;
+        result = 31 * result + (fun != null ? fun.hashCode() : 0);
+        return result;
     }
 }

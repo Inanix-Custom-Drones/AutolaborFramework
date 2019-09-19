@@ -1,11 +1,15 @@
 package cn.autolabor.core.server.executor;
 
+import cn.autolabor.util.lambda.LambdaFunWithName;
+
+import java.util.Objects;
+
 public class CallbackItem {
 
     private AbstractTask task;
-    private String event;
+    private LambdaFunWithName event;
 
-    public CallbackItem(AbstractTask task, String event) {
+    public CallbackItem(AbstractTask task, LambdaFunWithName event) {
         this.task = task;
         this.event = event;
     }
@@ -18,11 +22,11 @@ public class CallbackItem {
         this.task = task;
     }
 
-    public String getEvent() {
+    public LambdaFunWithName getEvent() {
         return event;
     }
 
-    public void setEvent(String event) {
+    public void setEvent(LambdaFunWithName event) {
         this.event = event;
     }
 
@@ -33,23 +37,22 @@ public class CallbackItem {
         if (o == null || getClass() != o.getClass())
             return false;
 
-        CallbackItem eventItem = (CallbackItem) o;
+        CallbackItem that = (CallbackItem) o;
 
-        return task.equals(eventItem.task) && event.equals(eventItem.event);
+        if (!Objects.equals(task, that.task))
+            return false;
+        return Objects.equals(event, that.event);
     }
 
     @Override
     public int hashCode() {
-        int result = task.hashCode();
-        result = 31 * result + event.hashCode();
+        int result = task != null ? task.hashCode() : 0;
+        result = 31 * result + (event != null ? event.hashCode() : 0);
         return result;
     }
 
     @Override
     public String toString() {
-        return "CallbackItem{" +
-                "task=" + task.getTaskName() +
-                ", event='" + event + '\'' +
-                '}';
+        return "CallbackItem{" + "task=" + task + ", event=" + event + '}';
     }
 }

@@ -8,9 +8,11 @@ import cn.autolabor.core.server.ServerManager;
 import cn.autolabor.core.server.executor.AbstractTask;
 import cn.autolabor.core.server.executor.CallbackItem;
 import cn.autolabor.core.server.executor.SimpleTask;
+import cn.autolabor.core.server.executor.TaskMethod;
 import cn.autolabor.core.server.message.MessageHandle;
 import cn.autolabor.util.Strings;
 import cn.autolabor.util.Sugar;
+import cn.autolabor.util.lambda.LambdaFunWithName;
 import cn.autolabor.util.reflect.Reflects;
 import cn.autolabor.util.reflect.TypeNode;
 
@@ -61,6 +63,23 @@ public class TaskServer {
         }
     }
 
+    public void remove(AbstractTask task) {
+        final ReentrantLock lock = this.lock;
+        lock.lock();
+        try {
+            taskPool.remove(task.getTaskName());
+            Set<CallbackItem> remove = new HashSet<>();
+            registerTaskCallback.forEach(i -> {
+                if (i.getTask().equals(task)) {
+                    remove.add(i);
+                }
+            });
+            registerTaskCallback.removeAll(remove);
+        } finally {
+            lock.unlock();
+        }
+    }
+
     public void register(AbstractTask task) {
         final ReentrantLock lock = this.lock;
         lock.lock();
@@ -89,7 +108,11 @@ public class TaskServer {
             if (t != null) {
                 if (m.getParameterCount() == 1 || m.getParameterCount() == 2) {
                     Type paramType = m.getParameters()[0].getParameterizedType();
-                    MessageHandle handle = ServerManager.me().getOrCreateMessageHandle(t.topic(), new TypeNode(paramType));
+                    String topicStr = t.topic();
+                    if (topicStr.startsWith("${") && topicStr.endsWith("}")) {
+                        topicStr = (String) ServerManager.me().getConfig(task, topicStr.substring(2, topicStr.length() - 1));
+                    }
+                    MessageHandle handle = ServerManager.me().getOrCreateMessageHandle(topicStr, new TypeNode(paramType));
                     TaskFunction tf = m.getAnnotation(TaskFunction.class);
                     if (tf != null) {
                         handle.addCallback(task, Strings.isBlank(tf.name()) ? m.getName() : tf.name(), t.source());
@@ -169,11 +192,14 @@ public class TaskServer {
         final ReentrantLock lock = this.lock;
         lock.lock();
         try {
-            CallbackItem event = new CallbackItem(task, eventName);
-            if (!registerTaskCallback.contains(event)) {
-                registerTaskCallback.add(event);
-                for (Map.Entry<String, AbstractTask> entry : taskPool.entrySet()) {
-                    ServerManager.me().run(task, eventName, entry.getValue()); // topic , messageHandle
+            TaskMethod method = task.getEvent(eventName);
+            if (null != method) {
+                CallbackItem event = new CallbackItem(task, new LambdaFunWithName(method.getMethodName(), method.getFun()));
+                if (!registerTaskCallback.contains(event)) {
+                    registerTaskCallback.add(event);
+                    for (Map.Entry<String, AbstractTask> entry : taskPool.entrySet()) {
+                        ServerManager.me().run(task, eventName, entry.getValue()); // topic , messageHandle
+                    }
                 }
             }
         } finally {
@@ -185,8 +211,11 @@ public class TaskServer {
         final ReentrantLock lock = this.lock;
         lock.lock();
         try {
-            CallbackItem event = new CallbackItem(task, eventName);
-            registerTaskCallback.remove(event);
+            TaskMethod method = task.getEvent(eventName);
+            if (null != method) {
+                CallbackItem event = new CallbackItem(task, new LambdaFunWithName(method.getMethodName(), method.getFun()));
+                registerTaskCallback.remove(event);
+            }
         } finally {
             lock.unlock();
         }

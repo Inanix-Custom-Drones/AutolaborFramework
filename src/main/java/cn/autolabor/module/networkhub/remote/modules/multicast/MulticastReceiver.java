@@ -7,10 +7,7 @@ import cn.autolabor.module.networkhub.remote.resources.*;
 import cn.autolabor.module.networkhub.remote.utilities.SimpleInputStream;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.Inet4Address;
-import java.net.InterfaceAddress;
-import java.net.NetworkInterface;
+import java.net.*;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -20,8 +17,7 @@ import java.util.stream.Collectors;
  * 组播接收器
  * 协议： | 名字 string 0x00 | cmd byte | payload byte[] |
  */
-public final class MulticastReceiver
-    extends AbstractDependent<MulticastReceiver> {
+public final class MulticastReceiver extends AbstractDependent<MulticastReceiver> {
 
     private final int bufferSize;
 
@@ -74,16 +70,14 @@ public final class MulticastReceiver
         }
 
         try {
-            sockets
-                .safeGet()
-                .get(null)
-                .receive(bufferPacket);
+            sockets.safeGet().get(null).receive(bufferPacket);
+        } catch (SocketException e) {
+            System.out.println("Close multicast socket!");
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-        SimpleInputStream stream = new SimpleInputStream(
-            bufferPacket.getData(), 0, bufferPacket.getLength());
+        SimpleInputStream stream = new SimpleInputStream(bufferPacket.getData(), 0, bufferPacket.getLength());
 
         String sender = stream.readEnd().trim(); // 收名字
         if (name.tryLetOrDefault("", it -> it.value).equals(sender))
@@ -92,15 +86,7 @@ public final class MulticastReceiver
         {
             Inet4Address address = (Inet4Address) bufferPacket.getAddress();
 
-            List<Map.Entry<NetworkInterface, InterfaceAddress>> temp
-                = networks.tryLetOrDefault(null,
-                it -> it
-                    .view
-                    .entrySet()
-                    .stream()
-                    .filter(entry -> match(entry.getValue(), address))
-                    .collect(Collectors.toList())
-            );
+            List<Map.Entry<NetworkInterface, InterfaceAddress>> temp = networks.tryLetOrDefault(null, it -> it.view.entrySet().stream().filter(entry -> match(entry.getValue(), address)).collect(Collectors.toList()));
 
             if (temp != null && temp.size() == 1)
                 sockets.safeGet().get(temp.get(0).getKey());
@@ -110,15 +96,13 @@ public final class MulticastReceiver
 
         byte cmd_byte = (byte) stream.read();
         UdpCmd cmd = UdpCmd.memory.get(cmd_byte);
-        if (cmd == null) return;
+        if (cmd == null)
+            return;
         byte[] payload = stream.lookRest();
 
         //        System.out.println
         //            ("sender: " + sender + ", cmd: " + cmd + ", payload: byte[" + payload.length + "]");
 
-        listeners
-            .stream()
-            .filter(it -> it.getInterest().isEmpty() || it.getInterest().contains(cmd.id))
-            .forEach(it -> it.process(sender, cmd, payload));
+        listeners.stream().filter(it -> it.getInterest().isEmpty() || it.getInterest().contains(cmd.id)).forEach(it -> it.process(sender, cmd, payload));
     }
 }

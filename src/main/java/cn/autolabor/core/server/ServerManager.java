@@ -16,7 +16,6 @@ import cn.autolabor.util.Strings;
 import cn.autolabor.util.lambda.LambdaFunWithName;
 import cn.autolabor.util.reflect.TypeNode;
 
-import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -88,6 +87,10 @@ public class ServerManager {
         return this.configServer.checkParam(task.getTaskName(), paramName);
     }
 
+    public boolean checkConfig(String key, String paramName) {
+        return this.configServer.checkParam(key, paramName);
+    }
+
     public Object getConfig(AbstractTask task, String paramName) {
         return this.configServer.getParam(task.getTaskName(), paramName);
     }
@@ -99,6 +102,14 @@ public class ServerManager {
     public void setConfig(AbstractTask task, String paramName, Object param) {
         task.updateParameter(paramName, param);
         this.configServer.setParam(task.getTaskName(), paramName, param);
+    }
+
+    public void setConfig(String key, String paramName, Object param) {
+        AbstractTask task = taskServer.getTaskByName("key");
+        if (null != task) {
+            task.updateParameter(paramName, param);
+        }
+        this.configServer.setParam(key, paramName, param);
     }
 
     public void showConfig() {
@@ -140,6 +151,14 @@ public class ServerManager {
             TaskThreadLocal.unmarkTask(task);
         }
         return task;
+    }
+
+    public <T extends AbstractTask> T unRegister(T task) {
+        task.suspend = true;
+        task.onClose();
+        messageServer.remove(task);
+        taskServer.remove(task);
+        return null;
     }
 
     public AbstractTask getTaskByName(String taskName) {
@@ -238,9 +257,9 @@ public class ServerManager {
 
     public StackTraceElement getTaskTrace() {
         StackTraceElement[] stackInfo = Thread.currentThread().getStackTrace();
-//        for (StackTraceElement stackTraceElement : stackInfo) {
-//            System.err.println(stackTraceElement);
-//        }
+        //        for (StackTraceElement stackTraceElement : stackInfo) {
+        //            System.err.println(stackTraceElement);
+        //        }
         for (StackTraceElement stackTraceElement : stackInfo) {
             if (taskServer.taskTypeNames.contains(stackTraceElement.getClassName())) {
                 return stackTraceElement;
