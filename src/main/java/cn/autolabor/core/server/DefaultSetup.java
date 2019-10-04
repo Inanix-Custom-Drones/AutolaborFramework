@@ -8,8 +8,6 @@ import cn.autolabor.module.networkhub.UDPMulticastReceiver;
 
 public class DefaultSetup implements Setup {
 
-
-
     @Override
     public void start() {
         ServerManager.me().register(new UDPMulticastBroadcaster());
@@ -20,6 +18,9 @@ public class DefaultSetup implements Setup {
 
     @Override
     public void stop() {
+        ServerManager.me().taskServer.getAllTasks().forEach(task -> {
+            task.suspend = true;
+        });
         ServerManager.me().taskServer.getAllTasks().forEach(AbstractTask::onClose);
         //        System.out.println("\n" +
         //                " █████╗ ██╗   ██╗████████╗ ██████╗ ██╗      █████╗ ██████╗  ██████╗ ██████╗                   \n" +
